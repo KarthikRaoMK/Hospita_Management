@@ -1,7 +1,7 @@
-package com.hospitalmanagement.demo.Service;
+package com.hospitalmanagement.demo.service;
 
-import com.hospitalmanagement.demo.Entity.User;
-import com.hospitalmanagement.demo.Repository.UserRepository;
+import com.hospitalmanagement.demo.entity.User;
+import com.hospitalmanagement.demo.repository.UserRepository;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.stereotype.Service;
 

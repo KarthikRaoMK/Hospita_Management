@@ -1,6 +1,6 @@
-package com.hospitalmanagement.demo.Repository;
+package com.hospitalmanagement.demo.repository;
 
-import com.hospitalmanagement.demo.Entity.User;
+import com.hospitalmanagement.demo.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

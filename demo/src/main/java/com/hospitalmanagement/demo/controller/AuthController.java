@@ -1,7 +1,7 @@
-package com.hospitalmanagement.demo.Controller;
+package com.hospitalmanagement.demo.controller;
 
-import com.hospitalmanagement.demo.Entity.User;
-import com.hospitalmanagement.demo.Repository.UserRepository;
+import com.hospitalmanagement.demo.entity.User;
+import com.hospitalmanagement.demo.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 

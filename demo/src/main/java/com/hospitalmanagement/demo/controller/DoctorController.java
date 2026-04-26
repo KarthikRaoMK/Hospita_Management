@@ -1,7 +1,7 @@
-package com.hospitalmanagement.demo.Controller;
+package com.hospitalmanagement.demo.controller;
 
-import com.hospitalmanagement.demo.Entity.Doctor;
-import com.hospitalmanagement.demo.Service.DoctorService;
+import com.hospitalmanagement.demo.entity.Doctor;
+import com.hospitalmanagement.demo.service.DoctorService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

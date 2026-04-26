@@ -1,7 +1,7 @@
-package com.hospitalmanagement.demo.Service;
+package com.hospitalmanagement.demo.service;
 
-import com.hospitalmanagement.demo.Entity.Doctor;
-import com.hospitalmanagement.demo.Repository.DoctorRepository;
+import com.hospitalmanagement.demo.entity.Doctor;
+import com.hospitalmanagement.demo.repository.DoctorRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

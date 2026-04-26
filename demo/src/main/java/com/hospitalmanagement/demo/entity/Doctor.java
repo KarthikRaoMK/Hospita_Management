@@ -1,9 +1,12 @@
-package com.hospitalmanagement.demo.Entity;
+package com.hospitalmanagement.demo.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.util.List;
+
 
 @Entity
 @Table(name = "doctors")
@@ -25,6 +28,9 @@ public class Doctor {
     private String email;
 
     @Column(nullable = false)
-    private String  Password;
+    private String  password;
+    @JsonIgnore
+    @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL)
+    private List<Appointment> appointments;
 
 }
