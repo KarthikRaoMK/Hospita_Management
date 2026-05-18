@@ -43,4 +43,8 @@ public class PatientService {
     public void deletePatient(Long id) {
         repo.deleteById(id);
     }
+
+    public List<Patient> searchByDisease(String disease) {
+        return repo.findByDisease(disease);
+    }
 }

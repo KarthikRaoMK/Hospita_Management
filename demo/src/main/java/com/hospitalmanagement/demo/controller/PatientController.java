@@ -24,6 +24,7 @@ public class PatientController {
         Patient patient = new Patient();
         patient.setName(dto.getName());
         patient.setAge(dto.getAge());
+        patient.setBloodGroup(dto.getBloodGroup());
         patient.setDisease(dto.getDisease());
 
         return ResponseEntity.ok(patientService.savePatient(patient));
@@ -51,5 +52,11 @@ public class PatientController {
     public ResponseEntity<String> deletePatient(@PathVariable Long id) {
         patientService.deletePatient(id);
         return ResponseEntity.ok("Patient deleted successfully");
+    }
+
+
+    @GetMapping("/search")
+    public ResponseEntity<List<Patient>> search(@RequestParam String disease) {
+        return ResponseEntity.ok(patientService.searchByDisease(disease));
     }
 }
