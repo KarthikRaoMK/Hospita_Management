@@ -6,7 +6,8 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>4.0.2</version>
-        <relativePath/> </parent>
+        <relativePath/>
+    </parent>
     <groupId>com.hospitalmanagement</groupId>
     <artifactId>Hospital_Management</artifactId>
     <version>0.0.1-SNAPSHOT</version>
@@ -105,7 +106,7 @@
                             <goal>install-node-and-npm</goal>
                         </goals>
                         <configuration>
-                            <nodeVersion>v20.11.0</nodeVersion>
+                            <nodeVersion>v22.12.0</nodeVersion>
                         </configuration>
                     </execution>
                     <execution>
