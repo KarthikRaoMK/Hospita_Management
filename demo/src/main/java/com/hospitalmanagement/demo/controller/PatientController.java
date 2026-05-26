@@ -59,4 +59,10 @@ public class PatientController {
     public ResponseEntity<List<Patient>> search(@RequestParam String disease) {
         return ResponseEntity.ok(patientService.searchByDisease(disease));
     }
+
+    @PostMapping("/{patientId}/assign/{doctorId}")
+    public ResponseEntity<String> assignDoctor(@PathVariable Long patientId, @PathVariable Long doctorId) {
+        patientService.assignDoctor(patientId, doctorId);
+        return ResponseEntity.ok("Patient assigned successfully");
+    }
 }

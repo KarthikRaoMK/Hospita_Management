@@ -4,18 +4,29 @@ import api from '../services/api';
 
 function Patients() {
   const [patients, setPatients] = useState([]);
+  const [doctors, setDoctors] = useState([]);
   const [showAdd, setShowAdd] = useState(false);
   const [searchDisease, setSearchDisease] = useState('');
-  const [formData, setFormData] = useState({ name: '', age: '', bloodGroup: '', disease: '' });
+  const [formData, setFormData] = useState({ name: '', age: '', bloodGroup: '', disease: '', doctorId: '' });
 
   useEffect(() => {
     fetchPatients();
+    fetchDoctors();
   }, []);
 
   const fetchPatients = async () => {
     try {
       const res = await api.get('/patients');
       setPatients(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchDoctors = async () => {
+    try {
+      const res = await api.get('/doctors');
+      setDoctors(res.data);
     } catch (err) {
       console.error(err);
     }
@@ -33,14 +44,23 @@ function Patients() {
 
   const handleAdd = async (e) => {
     e.preventDefault();
+    if (!formData.doctorId) {
+      alert('Please select a doctor for this patient.');
+      return;
+    }
     try {
-      await api.post('/patients', { ...formData, age: parseInt(formData.age) });
-      setFormData({ name: '', age: '', bloodGroup: '', disease: '' });
+      const res = await api.post('/patients', { ...formData, age: parseInt(formData.age) });
+      const patientId = res.data.id;
+      
+      // Assign the patient to the selected doctor
+      await api.post(`/patients/${patientId}/assign/${formData.doctorId}`);
+      
+      setFormData({ name: '', age: '', bloodGroup: '', disease: '', doctorId: '' });
       setShowAdd(false);
       fetchPatients();
     } catch (err) {
       console.error(err);
-      alert('Error adding patient');
+      alert('Error adding patient or assigning doctor');
     }
   };
 
@@ -104,6 +124,20 @@ function Patients() {
                   <label className="form-label">Disease</label>
                   <input type="text" required className="form-input" value={formData.disease} onChange={e => setFormData({...formData, disease: e.target.value})} />
                 </div>
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Assign to Doctor</label>
+                <select 
+                  className="form-input" 
+                  required 
+                  value={formData.doctorId} 
+                  onChange={e => setFormData({...formData, doctorId: e.target.value})}
+                >
+                  <option value="">-- Select a Doctor --</option>
+                  {doctors.map(doc => (
+                    <option key={doc.id} value={doc.id}>Dr. {doc.name} - {doc.specialization}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <button type="submit" className="btn btn-primary">Save Patient</button>

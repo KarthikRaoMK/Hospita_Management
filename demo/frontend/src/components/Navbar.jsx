@@ -1,16 +1,42 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Activity } from 'lucide-react';
 
 function Navbar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const navLinks = [
-    { path: '/', label: 'Home' },
-    { path: '/doctors', label: 'Doctors' },
-    { path: '/patients', label: 'Patients' },
-    { path: '/login', label: 'Login' }
-  ];
+  useEffect(() => {
+    const checkLogin = () => {
+      const user = localStorage.getItem('user');
+      setIsLoggedIn(!!user);
+    };
+    
+    // Check initially
+    checkLogin();
+    
+    // In a real app we'd use a Context, but this listens to storage changes 
+    // or we can just rely on normal navigation
+    window.addEventListener('storage', checkLogin);
+    return () => window.removeEventListener('storage', checkLogin);
+  }, [location]); // re-check on route change since login sets localStorage then navigates
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    setIsLoggedIn(false);
+    navigate('/login');
+  };
+
+  const navLinks = isLoggedIn 
+    ? [
+        { path: '/', label: 'Home' },
+        { path: '/doctors', label: 'Doctors' },
+        { path: '/patients', label: 'Patients' }
+      ]
+    : [
+        { path: '/', label: 'Home' }
+      ];
 
   return (
     <nav className="navbar">
@@ -29,6 +55,22 @@ function Navbar() {
               {link.label}
             </Link>
           ))}
+          {isLoggedIn ? (
+            <button 
+              onClick={handleLogout} 
+              className="nav-link" 
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', fontWeight: 500 }}
+            >
+              Logout
+            </button>
+          ) : (
+            <Link 
+              to="/login" 
+              className={`nav-link ${location.pathname === '/login' ? 'active' : ''}`}
+            >
+              Login
+            </Link>
+          )}
         </div>
       </div>
     </nav>

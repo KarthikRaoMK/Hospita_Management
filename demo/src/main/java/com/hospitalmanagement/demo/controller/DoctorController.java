@@ -43,4 +43,9 @@ public class DoctorController {
         doctorService.deleteDoctor(id);
         return ResponseEntity.ok("Doctor deleted successfully");
     }
+
+    @GetMapping("/with-patients")
+    public ResponseEntity<List<com.hospitalmanagement.demo.dto.DoctorWithPatientsDTO>> getDoctorsWithPatients() {
+        return ResponseEntity.ok(doctorService.getDoctorsWithPatients());
+    }
 }

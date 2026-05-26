@@ -7,7 +7,10 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+import org.springframework.transaction.annotation.Transactional;
+
 @Service
+@Transactional
 public class DoctorService {
 
     @Autowired
@@ -42,5 +45,32 @@ public class DoctorService {
     // ✅ Delete
     public void deleteDoctor(Long id) {
         doctorRepository.deleteById(id);
+    }
+
+    public List<com.hospitalmanagement.demo.dto.DoctorWithPatientsDTO> getDoctorsWithPatients() {
+        List<Doctor> doctors = doctorRepository.findAll();
+        return doctors.stream().map(doctor -> {
+            com.hospitalmanagement.demo.dto.DoctorWithPatientsDTO dto = new com.hospitalmanagement.demo.dto.DoctorWithPatientsDTO();
+            dto.setId(doctor.getId());
+            dto.setName(doctor.getName());
+            dto.setSpecialization(doctor.getSpecialization());
+            dto.setEmail(doctor.getEmail());
+            
+            List<com.hospitalmanagement.demo.dto.AppointmentDTO> appointments = doctor.getAppointments() != null 
+                    ? doctor.getAppointments().stream()
+                        .map(app -> {
+                            com.hospitalmanagement.demo.dto.AppointmentDTO appDto = new com.hospitalmanagement.demo.dto.AppointmentDTO();
+                            appDto.setId(app.getId());
+                            appDto.setDate(app.getDate());
+                            appDto.setStatus(app.getStatus());
+                            appDto.setPrescription(app.getPrescription());
+                            appDto.setPatient(app.getPatient());
+                            return appDto;
+                        })
+                        .toList()
+                    : java.util.Collections.emptyList();
+            dto.setAppointments(appointments);
+            return dto;
+        }).toList();
     }
 }

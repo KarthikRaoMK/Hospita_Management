@@ -19,6 +19,11 @@ public class Appointment {
     @Column(nullable = false)
     private String date;
 
+    @Column(nullable = false)
+    private String status = "PENDING"; // PENDING or TREATED
+
+    @Column(columnDefinition = "TEXT")
+    private String prescription;
 
     @ManyToOne
     @JoinColumn(name = "patient_id", nullable = false)
