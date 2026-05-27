@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 
 @RestController
 @RequestMapping("/api/patients")
@@ -19,7 +21,18 @@ public class PatientController {
     private PatientService patientService;
 
     @PostMapping
-    public ResponseEntity<Patient> registerPatient(@Valid @RequestBody PatientDTO dto) {
+    @PreAuthorize("hasAnyRole('ADMIN', 'DOCTOR')")
+    public ResponseEntity<?> registerPatient(@Valid @RequestBody PatientDTO dto, Authentication authentication) {
+
+        boolean isDoctor = authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_DOCTOR"));
+        com.hospitalmanagement.demo.entity.Doctor doctor = null;
+
+        if (isDoctor) {
+            doctor = patientService.getDoctorByEmail(authentication.getName());
+            if (doctor == null) {
+                return ResponseEntity.badRequest().body("Doctor profile not found for the logged-in user. Please ask Admin to recreate your Doctor profile.");
+            }
+        }
 
         Patient patient = new Patient();
         patient.setName(dto.getName());
@@ -27,12 +40,21 @@ public class PatientController {
         patient.setBloodGroup(dto.getBloodGroup());
         patient.setDisease(dto.getDisease());
 
-        return ResponseEntity.ok(patientService.savePatient(patient));
+        Patient savedPatient = patientService.savePatient(patient);
+        
+        if (isDoctor && doctor != null) {
+            patientService.assignDoctor(savedPatient.getId(), doctor.getId());
+        }
+
+        return ResponseEntity.ok(savedPatient);
     }
 
     @GetMapping
-    public ResponseEntity<List<Patient>> getAllPatients() {
-        return ResponseEntity.ok(patientService.getAllPatients());
+    public ResponseEntity<List<com.hospitalmanagement.demo.dto.PatientResponseDTO>> getAllPatients(Authentication authentication) {
+        if (authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_DOCTOR"))) {
+            return ResponseEntity.ok(patientService.getPatientsForDoctorWithStatus(authentication.getName()));
+        }
+        return ResponseEntity.ok(patientService.getAllPatientsWithStatus());
     }
 
     @GetMapping("/{id}")
@@ -41,11 +63,31 @@ public class PatientController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Patient> updatePatient(@PathVariable Long id,
+    public ResponseEntity<com.hospitalmanagement.demo.dto.PatientResponseDTO> updatePatient(@PathVariable Long id,
                                                  @Valid @RequestBody PatientDTO dto) {
 
-        Patient updated = patientService.updatePatient(id, dto);
-        return ResponseEntity.ok(updated);
+        patientService.updatePatient(id, dto);
+        
+        // Return updated patient with mapped status/doctor
+        Patient updated = patientService.getPatientById(id);
+        com.hospitalmanagement.demo.dto.PatientResponseDTO responseDto = new com.hospitalmanagement.demo.dto.PatientResponseDTO();
+        responseDto.setId(updated.getId());
+        responseDto.setName(updated.getName());
+        responseDto.setAge(updated.getAge());
+        responseDto.setBloodGroup(updated.getBloodGroup());
+        responseDto.setDisease(updated.getDisease());
+        if (updated.getAssignedDoctor() != null) {
+            responseDto.setAssignedDoctorId(updated.getAssignedDoctor().getId());
+            responseDto.setAssignedDoctorName(updated.getAssignedDoctor().getName());
+        }
+        if (updated.getAppointments() != null && !updated.getAppointments().isEmpty()) {
+            com.hospitalmanagement.demo.entity.Appointment latestAppt = updated.getAppointments().get(updated.getAppointments().size() - 1);
+            responseDto.setStatus(latestAppt.getStatus());
+            responseDto.setPrescription(latestAppt.getPrescription());
+            responseDto.setAppointmentId(latestAppt.getId());
+        }
+        
+        return ResponseEntity.ok(responseDto);
     }
 
     @DeleteMapping("/{id}")
@@ -56,13 +98,24 @@ public class PatientController {
 
 
     @GetMapping("/search")
-    public ResponseEntity<List<Patient>> search(@RequestParam String disease) {
+    public ResponseEntity<List<com.hospitalmanagement.demo.dto.PatientResponseDTO>> search(@RequestParam String disease) {
         return ResponseEntity.ok(patientService.searchByDisease(disease));
     }
 
     @PostMapping("/{patientId}/assign/{doctorId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> assignDoctor(@PathVariable Long patientId, @PathVariable Long doctorId) {
         patientService.assignDoctor(patientId, doctorId);
         return ResponseEntity.ok("Patient assigned successfully");
+    }
+
+    @PutMapping("/{patientId}/treat")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<?> treatPatient(@PathVariable Long patientId, @RequestBody java.util.Map<String, String> payload, Authentication authentication) {
+        try {
+            return ResponseEntity.ok(patientService.treatPatientByDoctor(patientId, authentication.getName(), payload.get("prescription")));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }

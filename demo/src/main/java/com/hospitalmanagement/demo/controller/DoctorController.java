@@ -7,6 +7,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
+
 @CrossOrigin("*")
 @RestController
 @RequestMapping("/api/doctors")
@@ -17,6 +19,7 @@ public class DoctorController {
 
 
     @PostMapping("/register")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Doctor> registerDoctor(@RequestBody Doctor doctor) {
         return ResponseEntity.ok(doctorService.saveDoctor(doctor));
     }
@@ -34,11 +37,13 @@ public class DoctorController {
 
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Doctor> updateDoctor(@PathVariable Long id, @RequestBody Doctor doctor) {
         return ResponseEntity.ok(doctorService.updateDoctor(id, doctor));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> deleteDoctor(@PathVariable Long id) {
         doctorService.deleteDoctor(id);
         return ResponseEntity.ok("Doctor deleted successfully");
@@ -47,5 +52,12 @@ public class DoctorController {
     @GetMapping("/with-patients")
     public ResponseEntity<List<com.hospitalmanagement.demo.dto.DoctorWithPatientsDTO>> getDoctorsWithPatients() {
         return ResponseEntity.ok(doctorService.getDoctorsWithPatients());
+    }
+
+    @GetMapping("/{id}/patients")
+    public ResponseEntity<List<com.hospitalmanagement.demo.dto.PatientResponseDTO>> getPatientsForDoctorAndStatus(
+            @PathVariable Long id, 
+            @RequestParam(required = false) String status) {
+        return ResponseEntity.ok(doctorService.getPatientsForDoctorIdAndStatus(id, status));
     }
 }

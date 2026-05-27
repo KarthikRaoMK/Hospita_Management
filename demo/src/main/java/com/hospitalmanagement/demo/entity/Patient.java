@@ -41,4 +41,8 @@ public class Patient {
             fetch = FetchType.LAZY,
             orphanRemoval = true)
     private List<Appointment> appointments;
+
+    @ManyToOne
+    @JoinColumn(name = "assigned_doctor_id")
+    private Doctor assignedDoctor;
 }

@@ -1,18 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, UserCircle2, CheckCircle2, History } from 'lucide-react';
+import { Plus, Trash2, UserCircle2, CheckCircle2, History, ChevronDown, ChevronUp } from 'lucide-react';
 import api from '../services/api';
+import DischargeModal from '../components/DischargeModal';
+import Modal from '../components/Modal';
 
 function Doctors() {
   const [doctors, setDoctors] = useState([]);
   const [showAdd, setShowAdd] = useState(false);
   const [formData, setFormData] = useState({ name: '', specialization: '', email: '', password: '' });
+  
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const isAdmin = user.role === 'ADMIN';
 
   // Treatment Modal State
   const [activeAppointment, setActiveAppointment] = useState(null);
   const [prescription, setPrescription] = useState('');
 
-  // History Modal State
-  const [historyDoctor, setHistoryDoctor] = useState(null);
+  // Discharge Summary State
+  const [dischargeData, setDischargeData] = useState(null);
+  const [showDischarge, setShowDischarge] = useState(false);
+
+  // History Expandable State
+  const [expandedHistoryDocs, setExpandedHistoryDocs] = useState({});
 
   useEffect(() => {
     fetchDoctors();
@@ -58,12 +67,36 @@ function Doctors() {
     }
     try {
       await api.put(`/appointments/${activeAppointment.id}/treat`, { prescription });
+      // Keep appointment data for discharge modal
+      setDischargeData({ 
+        appointment: { ...activeAppointment, prescription }, 
+        doctorName: doctors.find(d => d.id === activeAppointment.doctor?.id)?.name || user.name 
+      });
       setActiveAppointment(null);
       setPrescription('');
       fetchDoctors();
+      setShowDischarge(true);
     } catch (err) {
       console.error(err);
       alert('Error submitting treatment');
+    }
+  };
+
+  const toggleHistory = (docId) => {
+    setExpandedHistoryDocs(prev => ({ ...prev, [docId]: !prev[docId] }));
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    try {
+      const d = new Date(dateString);
+      if (isNaN(d.getTime())) return dateString; // fallback
+      return d.toLocaleString('en-US', {
+        weekday: 'short', month: 'short', day: 'numeric',
+        hour: 'numeric', minute: '2-digit'
+      });
+    } catch (e) {
+      return dateString;
     }
   };
 
@@ -71,9 +104,11 @@ function Doctors() {
     <div className="container animate-fade-in" style={{ paddingTop: '2rem' }}>
       <div className="flex justify-between items-center mb-4">
         <h2 style={{ color: 'var(--color-primary)' }}>Doctor Portal</h2>
-        <button className="btn btn-primary" onClick={() => setShowAdd(!showAdd)}>
-          <Plus size={18} /> {showAdd ? 'Cancel' : 'Add Doctor'}
-        </button>
+        {isAdmin && (
+          <button className="btn btn-primary" onClick={() => setShowAdd(!showAdd)}>
+            <Plus size={18} /> {showAdd ? 'Cancel' : 'Add Doctor'}
+          </button>
+        )}
       </div>
 
       {showAdd && (
@@ -127,19 +162,28 @@ function Doctors() {
                   <div className="flex items-center gap-3">
                     <UserCircle2 size={32} color="var(--color-primary)" />
                     <div>
-                      <h3 style={{ margin: 0, fontSize: '1.25rem' }}>Dr. {doc.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 style={{ margin: 0, fontSize: '1.25rem' }}>Dr. {doc.name}</h3>
+                        {pendingAppointments.length > 0 && (
+                          <span className="badge badge-red" style={{ backgroundColor: '#fee2e2', color: '#991b1b', fontSize: '0.75rem', padding: '0.125rem 0.5rem', borderRadius: '9999px' }}>
+                            {pendingAppointments.length} Pending
+                          </span>
+                        )}
+                      </div>
                       <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
                         <span className="badge badge-blue">{doc.specialization}</span> • {doc.email}
                       </p>
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button className="btn btn-secondary" onClick={() => setHistoryDoctor(doc)}>
-                      <History size={16} /> View History ({historyAppointments.length})
+                    <button className="btn btn-outline" onClick={() => toggleHistory(doc.id)}>
+                      <History size={16} /> History ({historyAppointments.length}) {expandedHistoryDocs[doc.id] ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </button>
-                    <button className="btn btn-outline" style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={() => handleDelete(doc.id)}>
-                      <Trash2 size={16} />
-                    </button>
+                    {isAdmin && (
+                      <button className="btn btn-outline" style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={() => handleDelete(doc.id)}>
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
                 </div>
                 
@@ -159,11 +203,11 @@ function Doctors() {
                         <tbody>
                           {pendingAppointments.map(app => (
                             <tr key={app.id}>
-                              <td>{app.date}</td>
-                              <td style={{ fontWeight: 500 }}>{app.patient.name}</td>
-                              <td>{app.patient.disease}</td>
+                              <td>{formatDate(app.date)}</td>
+                              <td style={{ fontWeight: 500 }}>{app.patient?.name}</td>
+                              <td>{app.patient?.disease}</td>
                               <td>
-                                <button className="btn btn-primary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.875rem' }} onClick={() => setActiveAppointment(app)}>
+                                <button className="btn btn-primary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.875rem' }} onClick={() => setActiveAppointment({...app, doctor: doc})}>
                                   <CheckCircle2 size={16} /> Mark Treated
                                 </button>
                               </td>
@@ -177,6 +221,29 @@ function Doctors() {
                       No pending patients for Dr. {doc.name}.
                     </div>
                   )}
+
+                  {expandedHistoryDocs[doc.id] && (
+                    <div style={{ marginTop: '1.5rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+                      <h4 style={{ marginBottom: '1rem', color: 'var(--color-text)' }}>Treatment History</h4>
+                      {historyAppointments.length > 0 ? (
+                        <div className="flex flex-col gap-4">
+                          {historyAppointments.map(app => (
+                            <div key={app.id} style={{ padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '0.375rem', backgroundColor: '#fafafa' }}>
+                              <div className="flex justify-between mb-2">
+                                <strong>Patient: {app.patient?.name} ({app.patient?.disease})</strong>
+                                <span style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>{formatDate(app.date)}</span>
+                              </div>
+                              <div style={{ backgroundColor: 'white', padding: '0.75rem', borderRadius: '0.25rem', border: '1px solid #f1f5f9', whiteSpace: 'pre-wrap', fontSize: '0.875rem' }}>
+                                {app.prescription}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>No treatment history found.</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -185,62 +252,33 @@ function Doctors() {
       )}
 
       {/* Treatment Modal */}
-      {activeAppointment && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-          <div className="card" style={{ width: '100%', maxWidth: '500px' }}>
-            <div className="card-header">
-              <h3 style={{ margin: 0 }}>Treat Patient: {activeAppointment.patient.name}</h3>
-            </div>
-            <div className="card-body">
-              <div className="form-group">
-                <label className="form-label">Disease: {activeAppointment.patient.disease}</label>
-                <textarea 
-                  className="form-input" 
-                  rows="4" 
-                  placeholder="Enter prescription and treatment notes here..." 
-                  value={prescription} 
-                  onChange={e => setPrescription(e.target.value)} 
-                />
-              </div>
-              <div className="flex gap-2 justify-end mt-4">
-                <button className="btn btn-outline" onClick={() => setActiveAppointment(null)}>Cancel</button>
-                <button className="btn btn-primary" onClick={handleTreat}>Save & Mark Treated</button>
-              </div>
-            </div>
+      <Modal isOpen={!!activeAppointment} onClose={() => setActiveAppointment(null)} title={`Treat Patient: ${activeAppointment?.patient?.name}`}>
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ marginBottom: '1rem', color: 'var(--color-text)' }}>Enter the prescription details below:</p>
+          <div className="form-group" style={{ textAlign: 'left' }}>
+            <label className="form-label text-center">Disease: {activeAppointment?.patient?.disease}</label>
+            <textarea 
+              className="form-input" 
+              rows="4" 
+              placeholder="Enter prescription and treatment notes here..." 
+              value={prescription} 
+              onChange={e => setPrescription(e.target.value)} 
+            />
+          </div>
+          <div className="flex gap-2 justify-center" style={{ marginTop: '1.5rem' }}>
+            <button className="btn btn-outline" onClick={() => setActiveAppointment(null)}>Cancel</button>
+            <button className="btn btn-primary" onClick={handleTreat}>Save & Mark Treated</button>
           </div>
         </div>
-      )}
+      </Modal>
 
-      {/* History Modal */}
-      {historyDoctor && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-          <div className="card" style={{ width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div className="card-header flex justify-between items-center">
-              <h3 style={{ margin: 0 }}>Treatment History - Dr. {historyDoctor.name}</h3>
-              <button className="btn btn-outline" onClick={() => setHistoryDoctor(null)}>Close</button>
-            </div>
-            <div className="card-body">
-              {historyDoctor.appointments?.filter(a => a.status === 'TREATED').length > 0 ? (
-                <div className="flex flex-col gap-4">
-                  {historyDoctor.appointments.filter(a => a.status === 'TREATED').map(app => (
-                    <div key={app.id} style={{ padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '0.375rem' }}>
-                      <div className="flex justify-between mb-2">
-                        <strong>Patient: {app.patient.name} ({app.patient.disease})</strong>
-                        <span style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>{app.date}</span>
-                      </div>
-                      <div style={{ backgroundColor: '#f8fafc', padding: '0.75rem', borderRadius: '0.25rem', whiteSpace: 'pre-wrap' }}>
-                        {app.prescription}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>No treatment history found.</p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Discharge Summary Modal */}
+      <DischargeModal 
+        isOpen={showDischarge} 
+        onClose={() => setShowDischarge(false)} 
+        appointment={dischargeData?.appointment} 
+        doctorName={dischargeData?.doctorName} 
+      />
     </div>
   );
 }

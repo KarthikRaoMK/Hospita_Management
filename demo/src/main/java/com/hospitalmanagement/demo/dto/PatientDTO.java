@@ -19,4 +19,6 @@ public class PatientDTO {
 
     @NotBlank
     private String bloodGroup;
+
+    private Long assignedDoctorId;
 }
